@@ -1,0 +1,35 @@
+{
+  "name": "netwatch",
+  "version": "1.0.0",
+  "description": "Real-time Network Packet Analyzer with Encryption Detection",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:css": "npx @tailwindcss/cli -i ./src-css/app.css -o ./public/css/tailwind.css",
+    "dev": "npm run build:css && npx @tailwindcss/cli -i ./src-css/app.css -o ./public/css/tailwind.css --watch & node --watch server.js",
+    "seed": "node src/db/seed.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cap": "^0.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.4",
+    "socket.io": "^4.7.5",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.3.0",
+    "mongodb-memory-server": "^11.0.1",
+    "supertest": "^7.2.2",
+    "tailwindcss": "^4.2.2"
+  }
+}

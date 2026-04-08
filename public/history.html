@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetWatch — History</title>
+  <meta name="description" content="Query and export historical network packets" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tailwind.css" />
+</head>
+<body class="bg-sys-base text-sys-text font-sans min-h-screen relative overflow-x-hidden">
+
+  <!-- Subtle technical grid background -->
+  <div class="fixed inset-0 pointer-events-none opacity-20 z-0" style="background-image: 
+    linear-gradient(to right, var(--color-sys-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-sys-border) 1px, transparent 1px);
+    background-size: 40px 40px;">
+  </div>
+
+  <!-- ── Top Navigation ─────────────────────────────────────────────────── -->
+  <nav class="sticky top-0 z-50 bg-sys-base/95 backdrop-blur-md border-b border-sys-border h-16 px-6 flex items-center justify-between">
+    <a href="/dashboard.html" class="flex items-center gap-3 no-underline">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" class="text-sys-cyan">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+      </svg>
+      <span class="text-xl font-bold tracking-tight text-sys-text">Net<span class="text-sys-text-muted font-normal">Watch</span></span>
+    </a>
+
+    <ul class="hidden md:flex items-center gap-2">
+      <li><a href="/dashboard.html" class="px-4 py-2 text-sys-text-muted hover:text-sys-text text-sm font-semibold tracking-wide">Dashboard</a></li>
+      <li><a href="/history.html" class="px-4 py-2 bg-sys-surface border border-sys-cyan text-sys-cyan text-sm font-semibold tracking-wide">History</a></li>
+      <li><a href="/users.html" id="navUsers" class="px-4 py-2 text-sys-text-muted hover:text-sys-text text-sm font-semibold tracking-wide" style="display:none">Users</a></li>
+    </ul>
+
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-sys-surface border border-sys-border text-sm">
+        <div class="w-6 h-6 bg-sys-base border border-sys-border flex items-center justify-center text-[0.65rem] font-bold text-sys-text" id="userAvatar">A</div>
+        <span id="userNameDisplay" class="font-mono text-sys-text-muted">Admin</span>
+      </div>
+      <button id="logoutBtn" class="btn-ghost text-xs tracking-wider uppercase">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ────────────────────────────────────────────────────── -->
+  <div class="relative z-10 max-w-[1600px] mx-auto p-6 space-y-6 mt-4">
+
+    <!-- Header row -->
+    <div class="flex items-center justify-between pb-4 border-b border-sys-border">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-sys-text flex items-center gap-2">
+          <span class="w-1.5 h-6 bg-sys-purple inline-block"></span>
+          Packet History & Forensics
+        </h1>
+        <p class="text-sm font-mono text-sys-text-muted mt-2 tracking-wide uppercase">Query historical capture databanks</p>
+      </div>
+      
+      <!-- Export Dropdown / Buttons -->
+      <div class="flex gap-3">
+        <button id="btnExportCSV" class="btn-ghost text-xs tracking-wider uppercase flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          CSV Export
+        </button>
+        <button id="btnExportJSON" class="btn-ghost text-xs tracking-wider uppercase flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          JSON Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Control Panel -->
+    <section class="bg-sys-surface border border-sys-border p-5 flex flex-wrap items-end gap-6">
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2">Transport Protocol</label>
+        <select id="filterProtocol" class="input-base cursor-pointer">
+          <option value="">Any Protocol</option>
+          <option value="TCP">TCP</option>
+          <option value="UDP">UDP</option>
+          <option value="ICMP">ICMP</option>
+        </select>
+      </div>
+      
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2">Application Protocol</label>
+        <select id="filterAppProtocol" class="input-base cursor-pointer">
+          <option value="">Any App Protocol</option>
+          <option value="HTTPS">HTTPS</option>
+          <option value="HTTP">HTTP</option>
+          <option value="SSH">SSH</option>
+          <option value="SMTP">SMTP</option>
+          <option value="DNS">DNS</option>
+        </select>
+      </div>
+
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2">Encryption State</label>
+        <select id="filterEncrypted" class="input-base cursor-pointer">
+          <option value="">Any State</option>
+          <option value="true">Encrypted Only</option>
+          <option value="false">Exposed (Plain) Only</option>
+        </select>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="btnApply" class="btn-primary uppercase tracking-wider text-[0.7rem] px-6">Apply Query</button>
+        <button id="btnClear" class="btn-ghost uppercase tracking-wider text-[0.7rem] px-4">Reset</button>
+      </div>
+    </section>
+
+    <!-- Results Table -->
+    <section class="bg-sys-surface border border-sys-border">
+      <div class="px-5 py-3 border-b border-sys-border flex items-center justify-between">
+        <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+          <span class="w-1.5 h-1.5 bg-sys-purple inline-block"></span> Query Results
+        </span>
+        <span id="resultsCount" class="font-mono text-xs text-sys-text-muted bg-sys-base border border-sys-border px-2 py-0.5">Total: 0</span>
+      </div>
+      
+      <div class="overflow-x-auto min-h-[400px]">
+        <table class="w-full text-left text-sm whitespace-nowrap">
+          <thead class="bg-sys-base border-b border-sys-border text-xs uppercase tracking-wider text-sys-text-muted">
+            <tr>
+              <th class="px-5 py-3 font-semibold">Timestamp</th>
+              <th class="px-5 py-3 font-semibold">Src IP</th>
+              <th class="px-5 py-3 font-semibold">Dst IP</th>
+              <th class="px-5 py-3 font-semibold">Proto</th>
+              <th class="px-5 py-3 font-semibold">App</th>
+              <th class="px-5 py-3 font-semibold">Port</th>
+              <th class="px-5 py-3 font-semibold">Size</th>
+              <th class="px-5 py-3 font-semibold">Encryption</th>
+            </tr>
+          </thead>
+          <tbody id="historyTbody" class="divide-y divide-sys-border/50 font-mono text-[0.8rem]">
+            <tr><td colspan="8" class="text-center text-sys-text-muted p-12 font-sans text-sm">
+              <span class="animate-pulse">Loading databanks...</span>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="px-5 py-4 border-t border-sys-border bg-sys-base flex items-center justify-between flex-wrap gap-4">
+        <div class="text-xs text-sys-text-muted tracking-wider uppercase font-semibold">
+          Page <span id="pageCurrent" class="text-sys-cyan font-mono text-sm">1</span> of <span id="pageTotal" class="font-mono">1</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="btnPrev" class="btn-ghost text-xs px-3 py-1.5 uppercase" disabled>Previous</button>
+          <button id="btnNext" class="btn-ghost text-xs px-3 py-1.5 uppercase" disabled>Next Datablock</button>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /.max-w -->
+
+  <!-- Toast -->
+  <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3" id="toastContainer"></div>
+
+  <script src="/js/history.js" type="module"></script>
+</body>
+</html>

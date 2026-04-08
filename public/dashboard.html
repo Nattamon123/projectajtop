@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetWatch — Dashboard</title>
+  <meta name="description" content="Real-time network packet analysis and encryption monitoring dashboard" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tailwind.css" />
+</head>
+<body class="bg-sys-base text-sys-text font-sans min-h-screen relative overflow-x-hidden">
+  
+  <!-- Subtle technical grid background -->
+  <div class="fixed inset-0 pointer-events-none opacity-20 z-0" style="background-image: 
+    linear-gradient(to right, var(--color-sys-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-sys-border) 1px, transparent 1px);
+    background-size: 40px 40px;">
+  </div>
+
+  <!-- ── Top Navigation ─────────────────────────────────────────────────── -->
+  <nav class="sticky top-0 z-50 bg-sys-base/95 backdrop-blur-md border-b border-sys-border h-16 px-6 flex items-center justify-between">
+    <a href="/dashboard.html" class="flex items-center gap-3 no-underline">
+      <!-- Minimal Logo -->
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" class="text-sys-cyan">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+      </svg>
+      <span class="text-xl font-bold tracking-tight text-sys-text">Net<span class="text-sys-text-muted font-normal">Watch</span></span>
+      <span class="text-[0.65rem] font-bold px-2 py-0.5 bg-sys-cyan-faint border border-sys-cyan text-sys-cyan tracking-wider uppercase ml-1">Live</span>
+    </a>
+
+    <ul class="hidden md:flex items-center gap-2">
+      <li><a href="/dashboard.html" class="px-4 py-2 bg-sys-surface border border-sys-cyan text-sys-cyan text-sm font-semibold tracking-wide" id="navDashboard">Dashboard</a></li>
+      <li><a href="/history.html" class="px-4 py-2 text-sys-text-muted hover:text-sys-text text-sm font-semibold tracking-wide" id="navHistory">History</a></li>
+      <li><a href="/users.html" id="navUsers" class="px-4 py-2 text-sys-text-muted hover:text-sys-text text-sm font-semibold tracking-wide" style="display:none">Users</a></li>
+    </ul>
+
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
+        <span id="captureDot" class="w-2 h-2 bg-sys-red inline-block"></span>
+        <span id="captureStatus" class="text-sys-text-muted">Stopped</span>
+      </div>
+      
+      <div class="w-px h-6 bg-sys-border mx-2"></div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-sys-surface border border-sys-border text-sm">
+        <div class="w-6 h-6 bg-sys-base border border-sys-border flex items-center justify-center text-[0.65rem] font-bold text-sys-text" id="userAvatar">?</div>
+        <span id="userNameDisplay" class="font-mono text-sys-text-muted">...</span>
+      </div>
+      
+      <button id="logoutBtn" class="btn-ghost text-xs tracking-wider uppercase">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ────────────────────────────────────────────────────── -->
+  <div class="relative z-10 max-w-[1600px] mx-auto p-6 space-y-6">
+
+    <!-- KPI Cards -->
+    <section>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-sys-surface border border-sys-border p-5 border-l-2 border-l-sys-cyan">
+          <div class="text-[0.7rem] font-bold tracking-widest uppercase text-sys-text-muted mb-3">Total Packets</div>
+          <div class="font-mono text-3xl font-bold text-sys-cyan leading-none drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]" id="kpiTotal">0</div>
+          <div class="text-xs text-sys-text-muted mt-2">Since capture start</div>
+        </div>
+
+        <div class="bg-sys-surface border border-sys-border p-5 border-l-2 border-l-sys-purple">
+          <div class="text-[0.7rem] font-bold tracking-widest uppercase text-sys-text-muted mb-3">Packets / Sec</div>
+          <div class="font-mono text-3xl font-bold text-sys-purple leading-none drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]" id="kpiPps">0</div>
+          <div class="text-xs text-sys-text-muted mt-2">Current throughput</div>
+        </div>
+
+        <div class="bg-sys-surface border border-sys-border p-5 border-l-2 border-l-sys-green">
+          <div class="text-[0.7rem] font-bold tracking-widest uppercase text-sys-text-muted mb-3">Encrypted Traffic</div>
+          <div class="font-mono text-3xl font-bold text-sys-green leading-none drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" id="kpiEncPct">0%</div>
+          <div class="text-xs text-sys-text-muted mt-2 font-mono" id="kpiEncAbs">0 / 0 pkts</div>
+        </div>
+
+        <div class="bg-sys-surface border border-sys-border p-5 border-l-2 border-l-sys-red">
+          <div class="text-[0.7rem] font-bold tracking-widest uppercase text-sys-text-muted mb-3">Exposed Traffic</div>
+          <div class="font-mono text-3xl font-bold text-sys-red leading-none drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" id="kpiPlainPct">0%</div>
+          <div class="text-xs text-sys-text-muted mt-2 font-mono" id="kpiPlainAbs">0 pkts exposed</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Admin Capture Controls -->
+    <section class="bg-sys-surface border border-sys-border" id="captureControls" style="display:none">
+      <div class="px-5 py-3 border-b border-sys-border flex items-center justify-between">
+        <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+          <span class="w-1.5 h-1.5 bg-sys-cyan inline-block"></span> Control Unit
+        </span>
+        <button id="btnResetStats" class="btn-ghost text-xs py-1 px-3">Reset Databank</button>
+      </div>
+      <div class="p-5 flex flex-wrap items-end gap-6 bg-sys-base/50">
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2" for="ifaceSelect">Network Interface</label>
+          <select id="ifaceSelect" class="input-base cursor-pointer">
+            <option value="">Detecting interfaces…</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2" for="ppsRange">
+            Engine Rate : <span id="ppsLabel" class="font-mono text-sys-cyan">1000</span> pkt/s
+          </label>
+          <input id="ppsRange" type="range" class="w-full h-1 bg-sys-border appearance-none cursor-pointer" min="100" max="10000" step="100" value="1000" />
+        </div>
+        <div class="flex gap-3">
+          <button id="btnStart" class="btn-success uppercase tracking-wider text-[0.7rem]">Initiate</button>
+          <button id="btnStop"  class="btn-danger uppercase tracking-wider text-[0.7rem]" disabled>Halt</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts Row 1: Packets/sec + Protocol -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <div class="col-span-1 lg:col-span-8 bg-sys-surface border border-sys-border">
+        <div class="px-5 py-3 border-b border-sys-border flex items-center justify-between">
+          <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-sys-cyan inline-block"></span> Throughput Log
+          </span>
+          <span id="livePps" class="font-mono text-sm text-sys-cyan font-bold drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]">0 pps</span>
+        </div>
+        <div class="p-5">
+          <canvas id="chartPps" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="col-span-1 lg:col-span-4 bg-sys-surface border border-sys-border flex flex-col">
+        <div class="px-5 py-3 border-b border-sys-border">
+          <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-sys-purple inline-block"></span> Protocol Vector
+          </span>
+        </div>
+        <div class="p-5 flex-1 flex items-center justify-center">
+          <canvas id="chartProtocol" height="200" style="max-height:200px;"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Charts Row 2: Encryption + TLS Versions -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <div class="bg-sys-surface border border-sys-border">
+        <div class="px-5 py-3 border-b border-sys-border">
+          <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-sys-text inline-block"></span> Encryption Status
+          </span>
+        </div>
+        <div class="p-5">
+          <canvas id="chartEncryption" height="140"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-sys-surface border border-sys-border">
+        <div class="px-5 py-3 border-b border-sys-border">
+          <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-sys-text inline-block"></span> Crypto Layers
+          </span>
+        </div>
+        <div class="p-5">
+          <canvas id="chartTLS" height="140"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Charts Row 3: Top IPs + Packet Size -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <div class="bg-sys-surface border border-sys-border">
+        <div class="px-5 py-3 border-b border-sys-border">
+          <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-sys-yellow inline-block"></span> Top Source IPs
+          </span>
+        </div>
+        <div class="p-5">
+          <canvas id="chartTopIPs" height="150"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-sys-surface border border-sys-border">
+        <div class="px-5 py-3 border-b border-sys-border">
+          <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-sys-text inline-block"></span> Payload Dimensions
+          </span>
+        </div>
+        <div class="p-5">
+          <canvas id="chartSize" height="150"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Live Packet Feed -->
+    <section class="bg-sys-surface border border-sys-border">
+      <div class="px-5 py-3 border-b border-sys-border flex items-center justify-between">
+        <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
+          <span class="w-1.5 h-1.5 bg-sys-cyan inline-block"></span> Packet Stream
+        </span>
+        <div class="flex items-center gap-3">
+          <button id="btnPauseStream" class="btn-ghost text-xs py-1 px-3 flex items-center gap-2">
+            <span id="pauseDot" class="w-1.5 h-1.5 bg-sys-green inline-block animate-pulse"></span>
+            <span id="pauseLabel">Live</span>
+          </button>
+          <span id="feedCount" class="font-mono text-xs text-sys-text-muted bg-sys-base border border-sys-border px-2 py-0.5">0 pkt</span>
+        </div>
+      </div>
+      <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+        <table id="packetTable" class="w-full text-left text-sm whitespace-nowrap" aria-label="Live packet feed">
+          <thead class="sticky top-0 bg-sys-surface/95 backdrop-blur z-10 border-b border-sys-border text-xs uppercase tracking-wider text-sys-text-muted">
+            <tr>
+              <th class="px-5 py-3 font-semibold">Time</th>
+              <th class="px-5 py-3 font-semibold">Src IP</th>
+              <th class="px-5 py-3 font-semibold">Dst IP</th>
+              <th class="px-5 py-3 font-semibold">Proto</th>
+              <th class="px-5 py-3 font-semibold">App</th>
+              <th class="px-5 py-3 font-semibold">Port</th>
+              <th class="px-5 py-3 font-semibold">Size</th>
+              <th class="px-5 py-3 font-semibold">Encryption</th>
+            </tr>
+          </thead>
+          <tbody id="packetTbody" class="divide-y divide-sys-border/50 font-mono text-[0.8rem]">
+            <tr><td colspan="8" class="text-center text-sys-text-muted p-12 font-sans text-sm">
+              <span class="animate-pulse">Awaiting telemetry datastream...</span>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- /.max-w -->
+
+  <!-- Toast container -->
+  <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3" id="toastContainer"></div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Dashboard logic -->
+  <script src="/js/dashboard.js" type="module"></script>
+</body>
+</html>

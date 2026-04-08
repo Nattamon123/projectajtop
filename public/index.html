@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetWatch — Login</title>
+  <meta name="description" content="Sign in to NetWatch real-time network packet analyzer" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/css/tailwind.css" />
+</head>
+
+<body
+  class="bg-sys-base text-sys-text font-sans min-h-screen flex items-center justify-center relative overflow-hidden">
+
+  <!-- Subtle technical grid background -->
+  <div class="absolute inset-0 pointer-events-none opacity-20" style="background-image: 
+    linear-gradient(to right, var(--color-sys-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-sys-border) 1px, transparent 1px);
+    background-size: 40px 40px;">
+  </div>
+
+  <main class="w-full max-w-md p-8 relative z-10">
+    <div class="bg-sys-surface border border-sys-border shadow-2xl">
+      <!-- Header / Logo Area -->
+      <div class="p-8 border-b border-sys-border text-center">
+        <!-- Minimal Industrial Logo -->
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-sys-base border border-sys-border mb-6">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="square" class="text-sys-cyan">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-sys-text">TEST</V>
+        </h1>
+        <p class="text-sm font-mono text-sys-text-muted tracking-widest uppercase mt-2">Packet Analysis Unit</p>
+      </div>
+
+      <div class="p-8">
+        <div id="loginError"
+          class="hidden mb-6 p-4 bg-sys-red-faint border border-sys-red text-sys-red text-sm font-medium" role="alert">
+        </div>
+
+        <form id="loginForm" class="space-y-5" novalidate>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase"
+              for="username">Username</label>
+            <input id="username" class="input-base" type="text" placeholder="operator_id" autocomplete="username"
+              required />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase" for="password">Access
+              Code</label>
+            <input id="password" class="input-base" type="password" placeholder="••••••••"
+              autocomplete="current-password" required />
+          </div>
+
+          <button id="loginBtn" class="w-full btn-primary justify-center mt-4 uppercase tracking-widest text-xs h-11"
+            type="submit">
+            <span id="btnText">Authenticate</span>
+            <!-- Simple square spinner -->
+            <svg id="btnSpinner" class="hidden animate-spin ml-2 h-4 w-4 bg-sys-base"
+              style="border: 2px solid white; border-top-color: transparent;" viewBox="0 0 24 24"></svg>
+          </button>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-sys-border text-center">
+          <div
+            class="text-xs text-sys-text-muted bg-sys-base inline-block px-4 py-2 border border-sys-border relative -top-3">
+            DEFAULT CREDS: <span class="font-mono text-sys-cyan">admin</span> / <span
+              class="font-mono text-sys-cyan">admin123</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/login.js" type="module"></script>
+</body>
+
+</html>
