@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { captureEngine } from "../capture/captureEngine.js";
 import Packet from "../models/Packet.js";
 import Alert from "../models/Alert.js";
+import { getGeoLocation } from "../analysis/geoLocator.js";
 
 // ── In-memory Stats ──────────────────────────────────────────────────────────
 function freshStats() {
@@ -223,6 +224,12 @@ export function setupSocketHandler(io) {
   // ── Capture Engine → Socket Fan-out ──────────────────────────────────────
   // ตัวเชื่อม Engine กับหน้าเว็บ (Capture Engine → Socket Fan-out)
   captureEngine.on("batch", (packets) => {
+    // 🗺️ แนบข้อมูลพิกัด (Geolocation) เข้าไปในแต่ละแพ็กเก็ต ก่อนจะเอาไปทำสถิติและส่งให้หน้าเว็บ
+    for (const p of packets) {
+      if (!p.geo) {
+        p.geo = getGeoLocation(p.srcIp);
+      }
+    }
     updateStats(packets);
 
     // Load Shedding: drop oldest packets if buffer exceeds maximum capacity

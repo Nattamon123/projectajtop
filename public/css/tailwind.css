@@ -207,6 +207,9 @@
   .pointer-events-none {
     pointer-events: none;
   }
+  .visible {
+    visibility: visible;
+  }
   .absolute {
     position: absolute;
   }
@@ -341,6 +344,9 @@
   }
   .h-16 {
     height: calc(var(--spacing) * 16);
+  }
+  .h-\[350px\] {
+    height: 350px;
   }
   .max-h-\[400px\] {
     max-height: 400px;
@@ -624,6 +630,9 @@
   }
   .bg-sys-yellow-faint {
     background-color: var(--color-sys-yellow-faint);
+  }
+  .p-0 {
+    padding: calc(var(--spacing) * 0);
   }
   .p-3 {
     padding: calc(var(--spacing) * 3);

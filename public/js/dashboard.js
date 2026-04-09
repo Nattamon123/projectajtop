@@ -1,4 +1,5 @@
 import { nwSocket } from './api.js';
+import { initMap, plotPackets } from './geoMap.js';
 
 /**
  * NetWatch Dashboard — Main Client Script
@@ -385,6 +386,9 @@ function appendPackets(packets) {
   // Keep MAX_ROWS rows
   while (tbody.children.length > MAX_ROWS) tbody.removeChild(tbody.lastChild);
   document.getElementById('feedCount').textContent = `${feedCount.toLocaleString()} pkt`;
+
+  // 🗺️ เรียกใช้ฟังก์ชันนำแพ็กเก็ตเหล่านั้นไปจุดบนแผนที่
+  plotPackets(packets);
 }
 
 // ── Socket.IO ─────────────────────────────────────────────────────────────────
@@ -455,6 +459,8 @@ function updateCaptureStatus(s) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
+// 🗺️ เรียกคำสั่งสร้างแผนที่ใส่ในกล่องที่มี id="trafficMap"
+initMap('trafficMap');
 connectSocket();
 
 if (user.role === 'admin') {
