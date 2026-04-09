@@ -15,15 +15,31 @@ router.get('/history', async (req, res) => {
       protocol,
       appProtocol,
       encrypted,
+      srcIp,       // รับค่า Source IP จาก query
+      dstIp,       // รับค่า Destination IP จาก query
+      dstPort,     // รับค่า Destination Port จาก query
     } = req.query;
 
     const filter = {};
+    
+    // กรองตามโปรโตคอล (เช่น TCP, UDP)
     if (protocol)    filter.protocol    = protocol;
+    // กรองตามโปรโตคอลของแอปพลิเคชัน (เช่น HTTP, HTTPS)
     if (appProtocol) filter.appProtocol = appProtocol;
+    // กรองดูเฉพาะตัวที่เข้ารหัส หรือไม่เข้ารหัส
     if (encrypted !== undefined) filter.encrypted = encrypted === 'true';
 
-    // Prevent excessive memory usage by capping the limit at 500
-    const safeLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 500);
+    // ── ส่วน กรองขั้นสูง (Advanced Search) ──
+    // ใช้ RegExp เพื่อให้ค้นหา IP แค่บางส่วน (Partial Match) ได้ เช่น พิมพ์แค่ 192.168
+    if (srcIp) filter.srcIp = new RegExp(srcIp, 'i');
+    if (dstIp) filter.dstIp = new RegExp(dstIp, 'i');
+    
+    // แปลงพอร์ตเป็นตัวเลขก่อนค้นหา เพราะในฐานข้อมูลเก็บเป็น Number
+    if (dstPort) filter.dstPort = Number(dstPort);
+
+    // ป้องกันคนดึงข้อมูลทีละเยอะๆ มากเกินไปจนเซิร์ฟเวอร์ค้าง (ยึดเพดานไว้ที่ 500)
+    const safeLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 5000); // ยืดเป็น 5000 เผื่อตอน export
+
     const skip = (parseInt(page) - 1) * safeLimit;
 
     const [packets, total] = await Promise.all([

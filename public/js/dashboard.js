@@ -1,5 +1,5 @@
 import { nwSocket } from './api.js';
-import { initMap, plotPackets } from './geoMap.js';
+import { initMap, plotPackets, focusLocation } from './geoMap.js';
 
 /**
  * NetWatch Dashboard — Main Client Script
@@ -488,8 +488,41 @@ if (user.role === 'admin') {
   // 👇 เพิ่มตรงนี้: เพื่อให้พอดึงหลอดเสร็จปุ๊บ มันอัปเดตไปที่ Server ทันที
   ppsRange.addEventListener('change', () => {
     const pps = parseInt(ppsRange.value);
-    socket.emit('capture:setPps', { pps });
+    nwSocket.setPps(socket, pps);
   });
+
+  // 🗺️ ระบบปุ่มค้นหา IP แบบใส่เอง (Manual IP Locate)
+  const btnIpSearch    = document.getElementById('btnIpSearch');
+  const ipSearchInput  = document.getElementById('ipSearchInput');
+
+  if (btnIpSearch && ipSearchInput) {
+    btnIpSearch.addEventListener('click', () => {
+      const ip = ipSearchInput.value.trim();
+      if (!ip) return toast('⚠️ กรุณาระบุหมายเลข IP', 'warning');
+
+      // ส่งไปให้ Server ตรวจพิกัด
+      nwSocket.lookupIp(socket, ip, (res) => {
+        if (res.error) {
+          // หาก Server หาไม่เจอ หรือเกิดข้อผิดพลาด
+          toast(`❌ ${res.error}`, 'danger');
+        } else if (res.geo) {
+          // 🛡️ ตรวจสอบก่อนว่ามีพิกัดจริงไหม (Safety Check)
+          if (res.geo.latitude && res.geo.longitude) {
+            toast(`📍 พบตำแหน่งของ IP: ${ip}`, 'success');
+            focusLocation(res.geo.latitude, res.geo.longitude, `${ip} (${res.geo.country})`);
+          } else {
+            // กรณีพบข้อมูล IP แต่ไม่มีพิกัด (เช่น เป็น IP องค์กรบางประเภท)
+            toast(`⚠️ พบข้อมูล IP ${ip} แต่ไม่ระบุพิกัดบนแผนที่`, 'warning');
+          }
+        }
+      });
+    });
+
+    // ให้สามารถกด Enter ในช่องค้นหาได้
+    ipSearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') btnIpSearch.click();
+    });
+  }
 
   btnStart.addEventListener('click', () => {
     const iface = ifaceSelect.value;

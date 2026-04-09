@@ -62,6 +62,11 @@ const filterProtocol = document.getElementById('filterProtocol');
 const filterAppProtocol = document.getElementById('filterAppProtocol');
 const filterEncrypted = document.getElementById('filterEncrypted');
 
+// ดึงตัวแปรช่องค้นหาขั้นสูงมาเก็บไว้
+const filterSrcIp = document.getElementById('filterSrcIp');
+const filterDstIp = document.getElementById('filterDstIp');
+const filterDstPort = document.getElementById('filterDstPort');
+
 // ── Data Fetching
 async function fetchHistory(page = 1, isExport = false) {
   return nwApi.getHistory({
@@ -69,7 +74,11 @@ async function fetchHistory(page = 1, isExport = false) {
     limit: isExport ? 5000 : limit,
     protocol: filterProtocol.value,
     appProtocol: filterAppProtocol.value,
-    encrypted: filterEncrypted.value
+    encrypted: filterEncrypted.value,
+    // ส่งค่าไปยัง Backend ถ้ามีการพิมพ์
+    srcIp: filterSrcIp.value.trim(),
+    dstIp: filterDstIp.value.trim(),
+    dstPort: filterDstPort.value.trim()
   });
 }
 
@@ -133,9 +142,14 @@ async function loadPage(page) {
 // ── Event Listeners
 document.getElementById('btnApply').addEventListener('click', () => loadPage(1));
 document.getElementById('btnClear').addEventListener('click', () => {
+  // ล้างค่าทั้งหมดในทุกช่องค้นหา
   filterProtocol.value = "";
   filterAppProtocol.value = "";
   filterEncrypted.value = "";
+  filterSrcIp.value = "";
+  filterDstIp.value = "";
+  filterDstPort.value = "";
+  // โหลดข้อมูลใหม่ทั้งหมดกลับมาที่หน้า 1
   loadPage(1);
 });
 
@@ -194,6 +208,79 @@ document.getElementById('btnExportCSV').addEventListener('click', async () => {
     toast('CSV Export Complete', 'success');
   } catch (err) {
     toast('Export Failed: ' + err.message, 'error');
+  }
+});
+
+document.getElementById('btnExportPDF').addEventListener('click', async () => {
+  try {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) throw new Error('PDF library not loaded');
+
+    toast('Preparing PDF Report (up to 5000 rows)...', 'info');
+    const data = await fetchHistory(1, true);
+    if (!data.packets || data.packets.length === 0) {
+      toast('No data to export', 'error');
+      return;
+    }
+
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+    const now = new Date();
+
+    // ── PDF Header ──
+    doc.setFontSize(22);
+    doc.setTextColor(6, 182, 212); // sys-cyan
+    doc.text('NetWatch — Forensic Traffic Report', 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(161, 161, 170); // sys-text-muted
+    doc.text(`Generated on: ${now.toLocaleString()}`, 14, 28);
+    doc.text(`Total Records: ${data.total.toLocaleString()}`, 14, 33);
+
+    // ── Table Setup ──
+    const head = [['Timestamp', 'Source IP', 'Destination IP', 'Proto', 'App', 'Port', 'Size', 'Encryption']];
+    const body = data.packets.map(p => [
+      new Date(p.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium', hour12: false }),
+      p.srcIp,
+      p.dstIp,
+      p.protocol,
+      p.appProtocol,
+      p.dstPort,
+      `${p.size} B`,
+      p.encrypted ? (p.tlsVersion || 'Encrypted') : 'Plain'
+    ]);
+
+    doc.autoTable({
+      head,
+      body,
+      startY: 40,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        font: 'courier',
+        cellPadding: 2,
+        overflow: 'linebreak',
+        halign: 'left'
+      },
+      headStyles: {
+        fillColor: [39, 39, 42], // sys-border
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [244, 244, 245]
+      },
+      columnStyles: {
+        0: { cellWidth: 35 }, // Timestamp
+        6: { halign: 'right' } // Size
+      },
+      margin: { top: 40 }
+    });
+
+    doc.save(`netwatch_report_${Date.now()}.pdf`);
+    toast('PDF Report Generated', 'success');
+  } catch (err) {
+    console.error(err);
+    toast('PDF Export Failed: ' + err.message, 'error');
   }
 });
 

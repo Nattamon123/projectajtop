@@ -19,13 +19,19 @@ export const nwApi = {
   },
 
   // ── Packets & History ─────────────────────────────────────────────────────
-  async getHistory({ page = 1, limit = 100, protocol, appProtocol, encrypted }) {
+  // ดึงประวัติแพ็กเก็ต (รองรับการกรองทั้งแบบพื้นฐานและขั้นสูง)
+  async getHistory({ page = 1, limit = 100, protocol, appProtocol, encrypted, srcIp, dstIp, dstPort }) {
     const q = new URLSearchParams();
     q.set('page', page);
     q.set('limit', limit);
     if (protocol) q.set('protocol', protocol);
     if (appProtocol) q.set('appProtocol', appProtocol);
     if (encrypted !== undefined && encrypted !== "") q.set('encrypted', encrypted);
+
+    // ── แนบค่าตัวกรองขั้นสูงเข้าไปกับ URL ถ้ามีการกรอกเข้ามา ──
+    if (srcIp) q.set('srcIp', srcIp);
+    if (dstIp) q.set('dstIp', dstIp);
+    if (dstPort) q.set('dstPort', dstPort);
 
     const res = await fetch(`/api/packets/history?${q.toString()}`, {
       headers: { 'Authorization': `Bearer ${nwToken()}` }
@@ -99,5 +105,11 @@ export const nwSocket = {
   },
   resetStats(socket) {
     socket.emit('stats:reset');
+  },
+  setPps(socket, pps) {
+    socket.emit('capture:setPps', { pps });
+  },
+  lookupIp(socket, ip, callback) {
+    socket.emit('capture:lookupIp', ip, callback);
   }
 };

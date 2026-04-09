@@ -240,6 +240,14 @@
         <span class="text-xs font-bold tracking-widest uppercase text-sys-text inline-flex items-center gap-2">
           <span class="w-1.5 h-1.5 bg-sys-blue inline-block"></span> Global Tracker
         </span>
+        <!-- 🗺️ ส่วนค้นหา IP ด้วยตัวเอง (Manual Search UI) -->
+        <div class="flex items-center gap-2">
+          <input type="text" id="ipSearchInput" placeholder="ระบุเลข IP (เช่น 8.8.8.8)" 
+            class="bg-sys-base border border-sys-border px-3 py-1 text-xs font-mono text-sys-text focus:border-sys-cyan outline-none w-48 transition-colors" />
+          <button id="btnIpSearch" class="btn-ghost text-[0.65rem] py-1 px-3 uppercase tracking-widest hover:border-sys-cyan">
+            Locate
+          </button>
+        </div>
       </div>
       <div class="p-0">
         <!-- กล่องสำหรับวาดแผนที่ ความสูงจำกัดไว้ที่ 350px -->

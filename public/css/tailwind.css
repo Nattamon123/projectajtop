@@ -375,6 +375,9 @@
   .w-16 {
     width: calc(var(--spacing) * 16);
   }
+  .w-48 {
+    width: calc(var(--spacing) * 48);
+  }
   .w-full {
     width: 100%;
   }
@@ -902,6 +905,17 @@
     --tw-duration: 300ms;
     transition-duration: 300ms;
   }
+  .outline-none {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+  .hover\:border-sys-cyan {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-sys-cyan);
+      }
+    }
+  }
   .hover\:bg-sys-border\/20 {
     &:hover {
       @media (hover: hover) {
@@ -917,6 +931,11 @@
       @media (hover: hover) {
         color: var(--color-sys-text);
       }
+    }
+  }
+  .focus\:border-sys-cyan {
+    &:focus {
+      border-color: var(--color-sys-cyan);
     }
   }
   .md\:flex {

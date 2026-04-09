@@ -64,6 +64,10 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           JSON Export
         </button>
+        <button id="btnExportPDF" class="btn-ghost text-xs tracking-wider uppercase flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          PDF Report
+        </button>
       </div>
     </div>
 
@@ -98,6 +102,26 @@
           <option value="true">Encrypted Only</option>
           <option value="false">Exposed (Plain) Only</option>
         </select>
+      </div>
+
+      <!-- ── ตัวกรองขั้นสูง (Advanced Filters) ── -->
+      
+      <!-- ค้นหาจากไอพีต้นทาง (รองรับพิมพ์แค่บางส่วนได้) -->
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2">Source IP</label>
+        <input type="text" id="filterSrcIp" placeholder="e.g. 192.168" class="input-base" />
+      </div>
+
+      <!-- ค้นหาจากไอพีปลายทาง -->
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2">Dest IP</label>
+        <input type="text" id="filterDstIp" placeholder="e.g. 8.8.8.8" class="input-base" />
+      </div>
+
+      <!-- ค้นหาจากพอร์ตปลายทาง -->
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-bold tracking-wider text-sys-text-muted uppercase mb-2">Dest Port</label>
+        <input type="number" id="filterDstPort" placeholder="e.g. 443" class="input-base" />
       </div>
 
       <div class="flex gap-3">
@@ -153,6 +177,10 @@
 
   <!-- Toast -->
   <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3" id="toastContainer"></div>
+
+  <!-- Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
   <script src="/js/history.js" type="module"></script>
 </body>

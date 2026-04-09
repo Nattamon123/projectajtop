@@ -314,6 +314,25 @@ export function setupSocketHandler(io) {
       });
     });
 
+    // ── 🗺️ ระบบค้นหาพิกัด IP แบบระบุมือ (Manual Geo Lookup) ───────────────────
+    socket.on("capture:lookupIp", (ip, cb) => {
+      // ตรวจสอบว่ามี IP ถูกส่งมาไหม
+      if (!ip) return cb && cb({ error: "กรุณาระบุหมายเลข IP" });
+
+      try {
+        const geo = getGeoLocation(ip);
+        if (geo) {
+          // หากเจอ ให้ส่งพิกัดกลับไปให้หน้าเว็บ
+          cb && cb({ geo });
+        } else {
+          // หากไม่เจอ (เช่น IP ภายใน หรือไม่มีในฐานข้อมูล)
+          cb && cb({ error: "ไม่พบข้อมูลพิกัดสำหรับ IP นี้" });
+        }
+      } catch (err) {
+        cb && cb({ error: "เกิดข้อผิดพลาดในการตรวจสอบ IP" });
+      }
+    });
+
     socket.on("disconnect", () => {
       console.log(`🔌 [socket] ${username} disconnected`);
     });

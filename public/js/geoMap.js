@@ -61,3 +61,32 @@ export function plotPackets(packets) {
     }
   }
 }
+
+// 3️⃣ ฟังก์ชันพุ่งไปที่พิกัด (Focus/Jump to Location)
+// ใช้สำหรับระบบหน้าเว็บเวลากดพิมพ์ค้นหา IP เอง
+export function focusLocation(lat, lng, label) {
+  if (!map) return;
+
+  // 🛡️ ตรวจสอบความถูกต้องของพิกัด (Safety Check)
+  if (lat === null || lat === undefined || isNaN(lat) || 
+      lng === null || lng === undefined || isNaN(lng)) {
+    console.warn(`📍 Invalid coordinates for ${label}:`, { lat, lng });
+    return;
+  }
+
+  // 1. สั่งให้แผนที่ "พุ่ง" (Fly) ไปยังพิกัดนั้นด้วยความเร็วและแอนิเมชั่นที่สวยงาม
+  map.flyTo([lat, lng], 6, {
+    duration: 1.5
+  });
+
+  // 2. ปักหมุดสีแดง (พิเศษ) เพื่อให้เด่นกว่าจุดแพ็กเก็ตปกติ
+  const marker = L.marker([lat, lng]).addTo(map);
+  
+  // ใส่ข้อความบอกว่าเป็น IP อะไรที่เราค้นหา
+  marker.bindPopup(`<b>🔍 Manual Lookup</b><br>${label}`).openPopup();
+
+  // กำหนดให้หมุดค้นหาหายไปเองใน 10 วินาที เพื่อไม่ให้รก
+  setTimeout(() => {
+    map.removeLayer(marker);
+  }, 10000);
+}
