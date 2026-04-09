@@ -45,6 +45,8 @@ const PORT_MAP = {
  * Detect TLS handshake record and extract version
  * TLS record: byte[0]=0x16, byte[1]=major, byte[2]=minor
  */
+
+//ส่องดู byte ใน memory ที่ 0-2 ถ้าเป็น 0x16, 0x03 แสดงว่าเป็น TLS
 function detectTLSVersion(buf) {
   if (!buf || buf.length < 5) return null;
   if (buf[0] !== 0x16 || buf[1] !== 0x03) return null;
@@ -71,6 +73,7 @@ function detectSSH(buf) {
   return buf.slice(0, 4).toString('ascii') === 'SSH-';
 }
 
+// เช็ค http ว่ามี GET, POST, PUT, DELETE, HEAD, HTTP/ หรือไม่ ถ้ามีมันคือ HTTP เพราะมันไม่เข้ารหัส
 function detectHTTP(buf) {
   if (!buf || buf.length < 4) return false;
   const h = buf.slice(0, 8).toString('ascii');
@@ -127,7 +130,68 @@ export function analyzePacket(packet) {
     }
   }
 
-  return { ...packet, appProtocol, encrypted, tlsVersion };
+  // 4. Attach encryption simulation metadata if encrypted
+  let simEncryption = null;
+  if (encrypted) {
+    simEncryption = generateMockEncryptionData(tlsVersion, appProtocol);
+  }
+
+  return { ...packet, appProtocol, encrypted, tlsVersion, simEncryption };
+}
+
+/**
+ * Generate mock encryption simulation metadata for demonstration purposes.
+ */
+export function generateMockEncryptionData(tlsVersion, appProtocol) {
+  const isSSH = appProtocol === 'SSH';
+  const isOldTLS = tlsVersion === 'SSL 3.0' || tlsVersion === 'TLS 1.0' || tlsVersion === 'TLS 1.1';
+  
+  if (isSSH) {
+    return {
+      algorithm: Math.random() > 0.5 ? 'aes256-ctr' : 'chacha20-poly1305@openssh.com',
+      keyExchange: 'curve25519-sha256',
+      process: [
+        '1. Client & Server: Version Exchange (SSH-2.0)',
+        '2. Client & Server: KEXINIT (Algorithm negotiation)',
+        '3. Client: KEXDH_INIT (Send public key)',
+        '4. Server: KEXDH_REPLY (Send public key & signature)',
+        '5. Derive Shared Secret (Diffie-Hellman)',
+        '6. NEWKEYS: Switch to Encrypted Transport',
+        '7. Secure Payload Transmission'
+      ]
+    };
+  }
+  
+  if (isOldTLS) {
+    return {
+      algorithm: 'RSA_WITH_AES_128_CBC_SHA',
+      keyExchange: 'RSA (Static - Vulnerable to Forward Secrecy loss)',
+      process: [
+        '1. ClientHello: Propose Cipher Suites',
+        '2. ServerHello: Agree on RSA_WITH_AES_128_CBC_SHA',
+        '3. Client: Send Encrypted Pre-Master Secret (using Server RSA PubKey)',
+        '4. Server: Decrypt Pre-Master Secret',
+        '5. Derive Symmetric Keys',
+        '6. ChangeCipherSpec: Switch to encrypted mode'
+      ]
+    };
+  }
+
+  // Modern TLS
+  const cipher = Math.random() > 0.4 ? 'TLS_AES_256_GCM_SHA384' : 'TLS_CHACHA20_POLY1305_SHA256';
+  const kex = Math.random() > 0.5 ? 'X25519 (Elliptic Curve)' : 'ECDHE-RSA';
+  return {
+    algorithm: cipher,
+    keyExchange: kex,
+    process: [
+      '1. ClientHello: Support for TLS 1.2/1.3 + Cipher suites',
+      '2. ServerHello: Select ' + cipher,
+      '3. Server: Send Certificate & ' + kex + ' Params',
+      '4. Client: Verify Certificate & Send ' + kex + ' Params',
+      '5. Derive Master Secret (Perfect Forward Secrecy)',
+      '6. Application Data Encrypted/Decrypted'
+    ]
+  };
 }
 
 /**

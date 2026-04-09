@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import os from 'os';
-import { analyzePacket } from '../analysis/protocolAnalyzer.js';
+import { analyzePacket, generateMockEncryptionData } from '../analysis/protocolAnalyzer.js';
 
 let Cap = null;
 let decoders = null;
@@ -73,20 +73,23 @@ function generatePacket(iface) {
     tlsVersion: s.tlsVersion,
     size: sizeForScenario(s),
     interface: iface,
+    simEncryption: s.encrypted ? generateMockEncryptionData(s.tlsVersion, s.appProtocol) : null,
   };
 }
 
 // ── Capture Engine ──────────────────────────────────────────────────────────
-export class CaptureEngine extends EventEmitter {
+// ใช้สำหรับสร้าง "Class ลูก" (Subclass) ที่สืบทอดความสามารถมาจาก "Class แม่
+export class CaptureEngine extends EventEmitter { // 1. สร้างเครื่องมือใหม่ชื่อ CaptureEngine ที่เก่งเหมือน EventEmitter
   constructor() {
-    super();
-    this.running = false;
-    this.mode = 'simulation';
-    this.iface = null;
-    this.pps = 1000;
-    this._timer = null;
+    super(); // 2. ไปดึงความสามารถพื้นฐานจาก EventEmitter มาให้เรียบร้อยก่อน
 
-    // Live mode variables
+    // 3. กำหนดค่าเริ่มต้นเฉพาะตัวของ CaptureEngine เอง
+    this.running = false;            // สถานะการทำงานเริ่มต้นเป็นปิด
+    this.mode = 'simulation';       // โหมดเริ่มต้นเป้นการรีลอง
+    this.pps = 1000;                // จำนวน Packet ต่อวินาที
+    this._timer = null;             // ตัวจับเวลา
+
+    // การตั้งตัวแปรสำหรับโหมด Live...
     this._capSession = null;
     this._liveBatch = [];
     this._cachedLive = {}; // Cache Cap instances to avoid Windows close() crash

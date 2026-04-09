@@ -80,7 +80,7 @@
         </div>
 
         <div class="bg-sys-surface border border-sys-border p-5 border-l-2 border-l-sys-red">
-          <div class="text-[0.7rem] font-bold tracking-widest uppercase text-sys-text-muted mb-3">Exposed Traffic</div>
+          <div class="text-[0.7rem] font-bold tracking-widest uppercase text-sys-text-muted mb-3">Unencrypted Traffic</div>
           <div class="font-mono text-3xl font-bold text-sys-red leading-none drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" id="kpiPlainPct">0%</div>
           <div class="text-xs text-sys-text-muted mt-2 font-mono" id="kpiPlainAbs">0 pkts exposed</div>
         </div>
@@ -257,6 +257,48 @@
     </section>
 
   </div><!-- /.max-w -->
+
+  <!-- Encryption Simulation Modal -->
+  <div id="encModal" style="display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);">
+    <div style="background:var(--color-sys-surface, #18181b); border:1px solid var(--color-sys-border, #3f3f46); width:100%; max-width:520px; margin:1rem; box-shadow:0 25px 50px rgba(0,0,0,0.5); font-family:'Inter',sans-serif; max-height:90vh; overflow-y:auto;">
+      <!-- Header -->
+      <div style="padding:12px 20px; border-bottom:1px solid var(--color-sys-border,#3f3f46); display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--color-sys-text,#e4e4e7); display:flex; align-items:center; gap:8px;">
+          <span style="width:6px;height:6px;background:#10b981;display:inline-block;"></span> Encryption Simulation
+        </span>
+        <button id="encModalClose" style="background:none; border:1px solid var(--color-sys-border,#3f3f46); color:var(--color-sys-text-muted,#71717a); padding:4px 12px; font-size:0.75rem; cursor:pointer; font-family:inherit;">✕ Close</button>
+      </div>
+      <!-- Body -->
+      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <!-- Protocol + TLS row -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--color-sys-text-muted,#71717a); margin-bottom:4px;">Protocol</div>
+            <div id="encModalProto" style="font-family:'JetBrains Mono',monospace; color:#06b6d4; font-weight:700; font-size:0.95rem;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--color-sys-text-muted,#71717a); margin-bottom:4px;">TLS Version</div>
+            <div id="encModalTLS" style="font-family:'JetBrains Mono',monospace; color:#10b981; font-weight:700; font-size:0.95rem;">—</div>
+          </div>
+        </div>
+        <!-- Algorithm -->
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--color-sys-text-muted,#71717a); margin-bottom:6px;">Cipher Algorithm</div>
+          <div id="encModalAlgo" style="font-family:'JetBrains Mono',monospace; font-size:0.85rem; background:var(--color-sys-base,#09090b); border:1px solid var(--color-sys-border,#3f3f46); padding:10px 14px; color:#8b5cf6; font-weight:700;">—</div>
+        </div>
+        <!-- Key Exchange -->
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--color-sys-text-muted,#71717a); margin-bottom:6px;">Key Exchange</div>
+          <div id="encModalKex" style="font-family:'JetBrains Mono',monospace; font-size:0.85rem; background:var(--color-sys-base,#09090b); border:1px solid var(--color-sys-border,#3f3f46); padding:10px 14px; color:#eab308; font-weight:700;">—</div>
+        </div>
+        <!-- Handshake Steps -->
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--color-sys-text-muted,#71717a); margin-bottom:8px;">Handshake Process</div>
+          <ol id="encModalSteps" style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast container -->
   <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3" id="toastContainer"></div>

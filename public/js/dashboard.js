@@ -368,7 +368,8 @@ function appendPackets(packets) {
   for (const p of packets) {
     feedCount++;
     const tr = document.createElement('tr');
-    tr.className = rowClass(p);
+    tr.className = rowClass(p) + ' hover:bg-sys-base/50 cursor-pointer transition-colors';
+    tr._pktData = p; // store packet data for modal
     const t = new Date(p.timestamp).toLocaleTimeString([], { hour12: false });
     tr.innerHTML = `
       <td class="px-5 py-2 text-sys-text-muted">${t}</td>
@@ -379,6 +380,7 @@ function appendPackets(packets) {
       <td class="px-5 py-2 text-sys-text-muted">${p.dstPort}</td>
       <td class="px-5 py-2">${p.size} B</td>
       <td class="px-5 py-2">${encBadge(p)}</td>`;
+    tr.addEventListener('click', () => openEncModal(p));
     frag.prepend(tr);
   }
   tbody.prepend(frag);
@@ -390,6 +392,44 @@ function appendPackets(packets) {
   // 🗺️ เรียกใช้ฟังก์ชันนำแพ็กเก็ตเหล่านั้นไปจุดบนแผนที่
   plotPackets(packets);
 }
+
+// ── Encryption Simulation Modal ───────────────────────────────────────────────
+const encModal      = document.getElementById('encModal');
+const encModalClose = document.getElementById('encModalClose');
+
+function openEncModal(pkt) {
+  if (!pkt.encrypted || !pkt.simEncryption) {
+    toast('This packet is not encrypted — no simulation data', 'info');
+    return;
+  }
+
+  const sim = pkt.simEncryption;
+  document.getElementById('encModalProto').textContent = pkt.appProtocol || '—';
+  document.getElementById('encModalTLS').textContent   = pkt.tlsVersion || '—';
+  document.getElementById('encModalAlgo').textContent   = sim.algorithm || '—';
+  document.getElementById('encModalKex').textContent    = sim.keyExchange || '—';
+
+  const stepsEl = document.getElementById('encModalSteps');
+  stepsEl.innerHTML = '';
+  (sim.process || []).forEach((step, i) => {
+    const li = document.createElement('li');
+    const isLast = i === (sim.process.length - 1);
+    li.style.cssText = `padding:6px 10px; border-left:2px solid ${ isLast ? '#10b981' : '#06b6d4'}; color:${ isLast ? '#10b981' : '#a1a1aa'}; font-family:'JetBrains Mono',monospace; font-size:0.8rem; background:rgba(0,0,0,0.3);`;
+    li.textContent = step;
+    stepsEl.appendChild(li);
+  });
+
+  encModal.style.display = 'flex';
+}
+
+function closeEncModal() {
+  encModal.style.display = 'none';
+}
+
+encModalClose.addEventListener('click', closeEncModal);
+encModal.addEventListener('click', (e) => {
+  if (e.target === encModal) closeEncModal();
+});
 
 // ── Socket.IO ─────────────────────────────────────────────────────────────────
 let socket;
