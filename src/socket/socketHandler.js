@@ -5,47 +5,53 @@ import Packet from '../models/Packet.js';
 // ── In-memory Stats ──────────────────────────────────────────────────────────
 function freshStats() {
   return {
-    totalPackets:      0,
-    encryptedPackets:  0,
+    totalPackets: 0,
+    encryptedPackets: 0,
     unencryptedPackets: 0,
-    protocols:         {},   // { HTTP: n, HTTPS: n, … }
-    tlsVersions:       {},   // { 'TLS 1.3': n, … }
-    topSrcIps:         {},   // { '192.168.1.x': n }
+    protocols: {},   // { HTTP: n, HTTPS: n, … }
+    tlsVersions: {},   // { 'TLS 1.3': n, … }
+    topSrcIps: {},   // { '192.168.1.x': n }
     sizeBuckets: { '0-64': 0, '65-256': 0, '257-512': 0, '513-1024': 0, '1025+': 0 },
-    ppsWindow:         [],   // [{ t, pps }] last 60 seconds
-    _lastWindowCount:  0,
-    _lastWindowTs:     Date.now(),
+    ppsWindow: [],   // [{ t, pps }] last 60 seconds
+    _lastWindowCount: 0,
+    _lastWindowTs: Date.now(),
   };
 }
 let stats = freshStats();
 
 // ── DB Write Buffer ───────────────────────────────────────────────────────────
 let dbBuf = [];
-const DB_FLUSH_MS   = 1000;
-const DB_BATCH_MAX  = 500;
+//ความถึ่ในการบันทึกข้อมูลลงdb flash คือการ สั่งให้เขียนข้อมูลลงดิสก์ตามรอบ
+const DB_FLUSH_MS = 500;
+//จำนวนข้อมูลที่จะบันทึกต่อครั้ง ในการไปบันทึก 1 ครั้ง ระบบจะหยิบข้อมูลออกไปสูงสุด 5,000 แถว batch คือ จำนวนข้อมูลที่จะบันทึกต่อ 1 request
+const DB_BATCH_MAX = 5000;
+//จำนวนข้อมูลที่จะบันทึกต่อครั้ง buffer คือ ตัวแปรที่พีกข้อมูลไว้รอบันทึก
+const DB_BUFFER_LIMIT = 30000;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────จัดเรื่องสถิติ
 function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
 
+// 
 function updateStats(packets) {
   const now = Date.now();
   const elapsed = (now - stats._lastWindowTs) / 1000;
 
   // Per-second PPS sliding window
   stats._lastWindowCount += packets.length;
-  if (elapsed >= 1) {
+  if (elapsed >= 1) { //1 วิ
     const pps = Math.round(stats._lastWindowCount / elapsed);
-    stats.ppsWindow.push({ t: new Date().toISOString(), pps });
-    if (stats.ppsWindow.length > 60) stats.ppsWindow.shift();
+    stats.ppsWindow.push({ t: new Date().toISOString(), pps }); // ส่งค่าไปวาดกราฟเส้น
+    if (stats.ppsWindow.length > 60) stats.ppsWindow.shift(); // เก็บแค่ 60 วินาทีล่าสุด
     stats._lastWindowCount = 0;
-    stats._lastWindowTs    = now;
+    stats._lastWindowTs = now;
   }
 
   for (const p of packets) {
+    //stats รวมข้อมูล 
     stats.totalPackets++;
     if (p.encrypted) stats.encryptedPackets++;
-    else             stats.unencryptedPackets++;
-
+    else stats.unencryptedPackets++;
+    // แกะข้อมูลที่ได้รับมา
     stats.protocols[p.appProtocol] = (stats.protocols[p.appProtocol] || 0) + 1;
 
     if (p.tlsVersion) {
@@ -54,39 +60,42 @@ function updateStats(packets) {
 
     stats.topSrcIps[p.srcIp] = (stats.topSrcIps[p.srcIp] || 0) + 1;
 
-    if      (p.size <=   64) stats.sizeBuckets['0-64']++;
-    else if (p.size <=  256) stats.sizeBuckets['65-256']++;
-    else if (p.size <=  512) stats.sizeBuckets['257-512']++;
+    if (p.size <= 64) stats.sizeBuckets['0-64']++;
+    else if (p.size <= 256) stats.sizeBuckets['65-256']++;
+    else if (p.size <= 512) stats.sizeBuckets['257-512']++;
     else if (p.size <= 1024) stats.sizeBuckets['513-1024']++;
-    else                     stats.sizeBuckets['1025+']++;
+    else stats.sizeBuckets['1025+']++;
   }
 }
 
+// สร้าง payload ข้อมูลที่เก็บจาก stats มา ทำเป็น object ที่ถูกตาม payload เพื่อเตรียมส่งไปหน้าเว็บ
 function buildPayload() {
+  //นับจำนวนแพ็คเก็ตทั้งหมด ใส่ || เพราะ กัน ตัวหารเป็น0
   const total = stats.totalPackets || 1;
+  // เก็บค่าความเร็วของ pps 
   const currentPps = stats.ppsWindow.length
     ? stats.ppsWindow[stats.ppsWindow.length - 1].pps : 0;
 
-  // Top 10 IPs sorted by count
+  // Top 10 IPs sorted by count ------------- Top Source IPs
   const topSrcIps = Object.entries(stats.topSrcIps)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-    .map(([ip, count]) => ({ ip, count }));
+    .sort(([, a], [, b]) => b - a) // เรียงลำดับ จาก ม ไป น 
+    .slice(0, 10) // เอาแค่ 10 อันดับแรก
+    .map(([ip, count]) => ({ ip, count })); // แปลงเป็นรูปแบบหน้าเว็บ
 
   return {
-    totalPackets:      stats.totalPackets,
+    totalPackets: stats.totalPackets,
     currentPps,
-    encryptedPct:      Math.round((stats.encryptedPackets  / total) * 100),
-    encryptedPackets:  stats.encryptedPackets,
+    encryptedPct: Math.round((stats.encryptedPackets / total) * 100),
+    encryptedPackets: stats.encryptedPackets,
     unencryptedPackets: stats.unencryptedPackets,
-    protocols:         stats.protocols,
-    tlsVersions:       stats.tlsVersions,
+    protocols: stats.protocols,
+    tlsVersions: stats.tlsVersions,
     topSrcIps,
-    sizeBuckets:       stats.sizeBuckets,
-    ppsHistory:        stats.ppsWindow.slice(-60),
+    sizeBuckets: stats.sizeBuckets,
+    ppsHistory: stats.ppsWindow.slice(-60),
   };
 }
-
+//grateful showdown component ปิดเซิฟวอร์ สั่งให้ข้อมูลที่ค้างอยู่ใน buffer บันทึกลงdb
 export async function flushDbBuffer() {
   if (!dbBuf.length) return;
   const batch = dbBuf.splice(0, dbBuf.length);
@@ -98,7 +107,7 @@ export async function flushDbBuffer() {
   }
 }
 
-// ── Socket Handler ────────────────────────────────────────────────────────────
+// ── Socket Handler ──────────────────────────────────────────────────────────── คุมการสื่อสารระหว่ง backend กับ frontend
 export function setupSocketHandler(io) {
 
   // ── JWT Auth Middleware ───────────────────────────────────────────────────
@@ -114,6 +123,7 @@ export function setupSocketHandler(io) {
   });
 
   // ── DB Write Flush ────────────────────────────────────────────────────────
+  // ตั้งเวลาทุก 0.5 วินาที ให้เดินไปเช็กในBuffer แล้วหยิบของออกไปเซฟลง DB
   setInterval(async () => {
     if (!dbBuf.length) return;
     const batch = dbBuf.splice(0, DB_BATCH_MAX);
@@ -122,11 +132,20 @@ export function setupSocketHandler(io) {
     } catch {
       // Non-critical: drop batch if DB unavailable
     }
-  }, DB_FLUSH_MS);
+  }, DB_FLUSH_MS); //  ครั้งละ 5,000 แถว
 
   // ── Capture Engine → Socket Fan-out ──────────────────────────────────────
+  // ตัวเชื่อม Engine กับหน้าเว็บ (Capture Engine → Socket Fan-out)
   captureEngine.on('batch', (packets) => {
     updateStats(packets);
+
+    // Load Shedding: drop oldest packets if buffer exceeds maximum capacity
+    //logic การโยนของทิ้ง เพื่อกัน
+    if (dbBuf.length + packets.length > DB_BUFFER_LIMIT) {
+      const dropCount = (dbBuf.length + packets.length) - DB_BUFFER_LIMIT;
+      dbBuf.splice(0, dropCount);
+      console.warn(`⚠️ [DB Buffer] Load Shedding: Dropped ${dropCount} oldest packets to prevent OOM.`);
+    }
     dbBuf.push(...packets);
 
     // Live feed: last 20 packets (not full batch — saves bandwidth)
@@ -149,10 +168,10 @@ export function setupSocketHandler(io) {
 
     // Send current state on connect
     socket.emit('capture:status', {
-      running:   captureEngine.running,
-      mode:      captureEngine.mode,
+      running: captureEngine.running,
+      mode: captureEngine.mode,
       interface: captureEngine.iface,
-      pps:       captureEngine.pps,
+      pps: captureEngine.pps,
     });
     socket.emit('stats:update', buildPayload());
 

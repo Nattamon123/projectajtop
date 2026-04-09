@@ -469,6 +469,12 @@ if (user.role === 'admin') {
     ppsLabel.textContent = parseInt(ppsRange.value).toLocaleString();
   });
 
+  // 👇 เพิ่มตรงนี้: เพื่อให้พอดึงหลอดเสร็จปุ๊บ มันอัปเดตไปที่ Server ทันที
+  ppsRange.addEventListener('change', () => {
+    const pps = parseInt(ppsRange.value);
+    socket.emit('capture:setPps', { pps });
+  });
+
   btnStart.addEventListener('click', () => {
     const iface = ifaceSelect.value;
     const pps   = parseInt(ppsRange.value);
