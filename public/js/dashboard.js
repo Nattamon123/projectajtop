@@ -24,6 +24,12 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 // ── Toast Helper ──────────────────────────────────────────────────────────────
 function toast(msg, type = 'info', duration = 3000) {
   const tc  = document.getElementById('toastContainer');
+  
+  // Anti-flood: max 5 toasts visible at a time
+  while (tc.children.length >= 5) {
+    tc.removeChild(tc.firstChild);
+  }
+
   const el  = document.createElement('div');
   
   const baseClasses = "px-4 py-3 text-sm font-semibold border bg-sys-surface shadow-xl flex items-center gap-3 animate-[slideIn_0.3s_ease-out]";
@@ -407,6 +413,10 @@ function connectSocket() {
     document.getElementById('feedCount').textContent = '0 packets';
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">Stats reset. Waiting…</td></tr>';
     toast('Stats reset', 'info');
+  });
+
+  socket.on('security_alert', (alert) => {
+    toast(`[${alert.severity}] ${alert.message}`, alert.severity === 'CRITICAL' || alert.severity === 'HIGH' ? 'error' : 'info', 8000);
   });
 
   socket.on('packet:batch', appendPackets);

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { captureEngine } from '../capture/captureEngine.js';
 import Packet from '../models/Packet.js';
+import Alert from '../models/Alert.js';
 
 // ── In-memory Stats ──────────────────────────────────────────────────────────
 function freshStats() {
@@ -23,6 +24,68 @@ let stats = freshStats();
 let dbBuf = [];
 const DB_FLUSH_MS   = 1000;
 const DB_BATCH_MAX  = 500;
+
+// ── Security Alert Detection ──────────────────────────────────────────────────
+const portScanTracker = new Map();
+const ALERT_COOLDOWN = 30000; // 30 seconds cooldown per type per IP
+const cooldowns = new Map();
+
+function detectAlerts(packets) {
+  const alerts = [];
+  const now = Date.now();
+
+  for (const p of packets) {
+    const ipStr = p.srcIp;
+    let type = null;
+    let severity = 'LOW';
+    let message = '';
+
+    // Rule 1: SSL 3.0 or TLS 1.0/1.1 usage
+    if (p.encrypted && (p.tlsVersion === 'SSL 3.0' || p.tlsVersion === 'TLS 1.0' || p.tlsVersion === 'TLS 1.1')) {
+      type = 'DEPRECATED_TLS';
+      severity = 'MEDIUM';
+      message = `Insecure protocol (${p.tlsVersion}) from ${ipStr}`;
+    }
+    // Rule 2: Unencrypted Traffic
+    else if (!p.encrypted && (p.dstPort === 21 || p.dstPort === 23)) {
+      type = 'UNENCRYPTED_AUTH';
+      severity = 'HIGH';
+      message = `Cleartext ${p.appProtocol || 'traffic'} to port ${p.dstPort} from ${ipStr}`;
+    }
+
+    // Rule 3: Port Scan
+    if (!portScanTracker.has(ipStr)) {
+      portScanTracker.set(ipStr, new Set());
+    }
+    const ports = portScanTracker.get(ipStr);
+    ports.add(p.dstPort);
+    if (ports.size > 15) {
+       type = 'PORT_SCAN';
+       severity = 'CRITICAL';
+       message = `Potential Port Scan from ${ipStr} (${ports.size} ports)`;
+    }
+
+    if (type) {
+      const cdKey = `${ipStr}_${type}`;
+      const lastTrigger = cooldowns.get(cdKey) || 0;
+      if (now - lastTrigger > ALERT_COOLDOWN) {
+         alerts.push({
+           type,
+           severity,
+           message,
+           metadata: { srcIp: ipStr, dstIp: p.dstIp, protocol: p.appProtocol, dstPort: p.dstPort }
+         });
+         cooldowns.set(cdKey, now);
+      }
+    }
+  }
+
+  // Basic memory leak prevention
+  if (portScanTracker.size > 2000) portScanTracker.clear();
+  if (cooldowns.size > 2000) cooldowns.clear();
+
+  return alerts;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
@@ -128,6 +191,12 @@ export function setupSocketHandler(io) {
   captureEngine.on('batch', (packets) => {
     updateStats(packets);
     dbBuf.push(...packets);
+
+    const alerts = detectAlerts(packets);
+    alerts.forEach(alertData => {
+      io.to('dashboard').emit('security_alert', alertData);
+      Alert.create(alertData).catch(err => console.error('Alert DB Error:', err.message));
+    });
 
     // Live feed: last 20 packets (not full batch — saves bandwidth)
     const feed = packets.slice(-20);
