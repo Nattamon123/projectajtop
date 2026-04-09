@@ -1,4 +1,5 @@
-import { nwApi } from './api.js';
+import { nwApi, nwSocket } from './api.js';
+
 
 /**
  * NetWatch — Alerts Forensic Logic
@@ -6,7 +7,7 @@ import { nwApi } from './api.js';
 
 // ── Auth Guard
 const token = sessionStorage.getItem('nw_token');
-const user  = JSON.parse(sessionStorage.getItem('nw_user') || 'null');
+const user = JSON.parse(sessionStorage.getItem('nw_user') || 'null');
 if (!token || !user) { window.location.href = '/'; }
 
 // ── UI Setup
@@ -22,8 +23,8 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 
 // ── Toast Helper
 function toast(msg, type = 'info', duration = 3000) {
-  const tc  = document.getElementById('toastContainer');
-  const el  = document.createElement('div');
+  const tc = document.getElementById('toastContainer');
+  const el = document.createElement('div');
   const baseClasses = "px-4 py-3 text-sm font-semibold border bg-sys-surface shadow-xl flex items-center gap-3 animate-[slideIn_0.3s_ease-out]";
   let typeClasses = "";
   if (type === 'success') typeClasses = "border-sys-green text-sys-green";
@@ -39,6 +40,8 @@ function toast(msg, type = 'info', duration = 3000) {
 let currentPage = 1;
 const limit = 50;
 let totalPages = 1;
+let totalAlerts = 0;
+
 
 // ── DOM Elements
 const tbody = document.getElementById('alertsTbody');
@@ -60,10 +63,10 @@ function severityBadge(sev) {
 async function loadPage(page) {
   try {
     tbody.innerHTML = `<tr><td colspan="6" class="text-center text-sys-text-muted p-12 font-sans text-sm"><span class="animate-pulse">Accessing security vaults...</span></td></tr>`;
-    
+
     // Severity Filter logic (if "HIGH & ABOVE")
     let sevValue = filterSeverity.value;
-    
+
     const data = await nwApi.getAlerts({
       page,
       limit,
@@ -87,7 +90,7 @@ function renderTable(data) {
     const tr = document.createElement('tr');
     tr.className = `hover:bg-sys-border/20 transition-colors border-l-2 ${a.severity === 'CRITICAL' ? 'border-sys-red bg-sys-red-faint/10' : (a.severity === 'HIGH' ? 'border-sys-orange' : 'border-sys-yellow')}`;
     const t = new Date(a.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium', hour12: false });
-    
+
     tr.innerHTML = `
       <td class="px-5 py-3 text-sys-text-muted">${t}</td>
       <td class="px-5 py-3">${severityBadge(a.severity)}</td>
@@ -103,14 +106,113 @@ function renderTable(data) {
 
   // Update Pagination State
   currentPage = data.page;
-  totalPages = Math.ceil(data.total / limit) || 1;
+  totalAlerts = data.total;
+  totalPages = Math.ceil(totalAlerts / limit) || 1;
   pageCurrent.textContent = currentPage;
   pageTotal.textContent = totalPages;
-  resultsCount.textContent = `Total: ${data.total.toLocaleString()}`;
+  resultsCount.textContent = `Total: ${totalAlerts.toLocaleString()}`;
 
   btnPrev.disabled = currentPage <= 1;
   btnNext.disabled = currentPage >= totalPages;
 }
+
+// ── Socket.IO & Batch Processing ───────────────────────────────────────────
+let socket;
+let alertBuffer = [];
+let renderTimeout = null;
+
+function connectSocket() {
+  socket = io({ auth: { token }, reconnectionAttempts: 10, reconnectionDelay: 1500 });
+
+  socket.on('connect', () => {
+    console.log('🔌 [Socket] Alerts real-time connection established');
+  });
+
+  socket.on('security_alert', (alert) => {
+    totalAlerts++;
+
+    if (currentPage === 1) {
+      alertBuffer.push(alert);
+
+      // Load Shedding: Prevent memory leak if backend floods 10k pps
+      if (alertBuffer.length > 200) {
+        alertBuffer.shift();
+      }
+
+      if (!renderTimeout) {
+        renderTimeout = setTimeout(flushAlertBuffer, 1000); // Batch every 500ms
+      }
+    } else {
+      // Optimize updating count
+      if (!renderTimeout) {
+        renderTimeout = setTimeout(() => {
+          renderTimeout = null;
+          resultsCount.textContent = `Total: ${totalAlerts.toLocaleString()}`;
+        }, 1000);
+      }
+    }
+  });
+}
+
+function flushAlertBuffer() {
+  renderTimeout = null;
+  if (alertBuffer.length === 0) return;
+
+  resultsCount.textContent = `Total: ${totalAlerts.toLocaleString()}`;
+
+  const filter = filterSeverity.value;
+  let minIdx = -1;
+  const levels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+  if (filter) {
+    let minLevel = filter;
+    if (filter === 'HIGH & ABOVE') minLevel = 'HIGH';
+    if (filter === 'MEDIUM & ABOVE') minLevel = 'MEDIUM';
+    if (filter === 'CRITICAL ONLY') minLevel = 'CRITICAL';
+    minIdx = levels.indexOf(minLevel);
+  }
+
+  // Clear "No results" row if present
+  if (tbody.children.length === 1 && tbody.children[0].innerText.includes('No security incidents')) {
+    tbody.innerHTML = '';
+  }
+
+  const frag = document.createDocumentFragment();
+
+  // Process backwards to put newest alerts first
+  for (let i = alertBuffer.length - 1; i >= 0; i--) {
+    const a = alertBuffer[i];
+
+    if (minIdx !== -1) {
+      const alertIdx = levels.indexOf(a.severity);
+      if (alertIdx < minIdx) continue;
+    }
+
+    const tr = document.createElement('tr');
+    tr.className = `hover:bg-sys-border/20 transition-colors border-l-2 ${a.severity === 'CRITICAL' ? 'border-sys-red bg-sys-red-faint/10' : (a.severity === 'HIGH' ? 'border-sys-orange' : 'border-sys-yellow')} animate-[slideIn_0.3s_ease-out]`;
+    const t = new Date(a.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium', hour12: false });
+
+    tr.innerHTML = `
+      <td class="px-5 py-3 text-sys-text-muted">${t}</td>
+      <td class="px-5 py-3">${severityBadge(a.severity)}</td>
+      <td class="px-5 py-3 font-bold text-sys-text">${a.type}</td>
+      <td class="px-5 py-3 text-sys-text-muted italic">"${a.message}"</td>
+      <td class="px-5 py-3 font-mono">${a.metadata?.srcIp || 'N/A'}</td>
+      <td class="px-5 py-3 font-mono text-sys-text-muted">${a.metadata?.dstIp || 'N/A'}:${a.metadata?.dstPort || ''}</td>`;
+
+    frag.appendChild(tr);
+  }
+
+  tbody.prepend(frag);
+
+  // Clean old elements
+  while (tbody.children.length > limit) {
+    tbody.removeChild(tbody.lastChild);
+  }
+
+  alertBuffer = [];
+}
+
 
 // ── Event Listeners
 document.getElementById('btnApply').addEventListener('click', () => loadPage(1));
@@ -124,3 +226,5 @@ btnNext.addEventListener('click', () => { if (currentPage < totalPages) loadPage
 
 // ── Init
 loadPage(1);
+connectSocket();
+

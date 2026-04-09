@@ -387,6 +387,9 @@
   .max-w-\[1200px\] {
     max-width: 1200px;
   }
+  .max-w-\[1400px\] {
+    max-width: 1400px;
+  }
   .max-w-\[1600px\] {
     max-width: 1600px;
   }
@@ -395,6 +398,9 @@
   }
   .max-w-sm {
     max-width: var(--container-sm);
+  }
+  .min-w-\[120px\] {
+    min-width: 120px;
   }
   .min-w-\[200px\] {
     min-width: 200px;
@@ -532,6 +538,9 @@
     border-left-style: var(--tw-border-style);
     border-left-width: 2px;
   }
+  .\!border-sys-red {
+    border-color: var(--color-sys-red) !important;
+  }
   .border-sys-border {
     border-color: var(--color-sys-border);
   }
@@ -564,6 +573,9 @@
   }
   .border-l-sys-red {
     border-left-color: var(--color-sys-red);
+  }
+  .\!bg-sys-red {
+    background-color: var(--color-sys-red) !important;
   }
   .bg-sys-base {
     background-color: var(--color-sys-base);
@@ -612,6 +624,12 @@
   }
   .bg-sys-red-faint {
     background-color: var(--color-sys-red-faint);
+  }
+  .bg-sys-red-faint\/10 {
+    background-color: color-mix(in srgb, rgba(239, 68, 68, 0.1) 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-sys-red-faint) 10%, transparent);
+    }
   }
   .bg-sys-surface {
     background-color: var(--color-sys-surface);
@@ -810,6 +828,9 @@
   }
   .uppercase {
     text-transform: uppercase;
+  }
+  .italic {
+    font-style: italic;
   }
   .no-underline {
     text-decoration-line: none;
