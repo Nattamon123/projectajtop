@@ -52,7 +52,7 @@ function detectAlerts(packets) {
     let severity = "LOW";
     let message = "";
 
-    // Rule 1: SSL 3.0 or TLS 1.0/1.1 usage
+    // Rule 1: SSL 3.0 or TLS 1.0/1.1 usage 
     if (
       p.encrypted &&
       (p.tlsVersion === "SSL 3.0" ||
@@ -63,14 +63,14 @@ function detectAlerts(packets) {
       severity = "MEDIUM";
       message = `Insecure protocol (${p.tlsVersion}) from ${ipStr}`;
     }
-    // Rule 2: Unencrypted Traffic
+    // Rule 2: Unencrypted Traffic ไม่เข้ารหัส port ที่เสี่ยงเช่น 21 (FTP) , 23 (telnet)
     else if (!p.encrypted && (p.dstPort === 21 || p.dstPort === 23)) {
       type = "UNENCRYPTED_AUTH";
       severity = "HIGH";
       message = `Cleartext ${p.appProtocol || "traffic"} to port ${p.dstPort} from ${ipStr}`;
     }
 
-    // Rule 3: Port Scan
+    // Rule 3: Port Scan (limit 15 ports)
     if (!portScanTracker.has(ipStr)) {
       portScanTracker.set(ipStr, new Set());
     }
@@ -87,6 +87,7 @@ function detectAlerts(packets) {
       const lastTrigger = cooldowns.get(cdKey) || 0;
       if (now - lastTrigger > ALERT_COOLDOWN) {
         alerts.push({
+          timestamp: new Date().toISOString(),
           type,
           severity,
           message,
