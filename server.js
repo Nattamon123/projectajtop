@@ -13,6 +13,7 @@ import { captureEngine } from './src/capture/captureEngine.js';
 import authRoutes from './src/routes/auth.js';
 import userRoutes from './src/routes/users.js';
 import packetRoutes from './src/routes/packets.js';
+import alertsRoutes from './src/routes/alerts.js';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/packets', packetRoutes);
+app.use('/api/alerts', alertsRoutes);
 
 // ── Global Error Handler ────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

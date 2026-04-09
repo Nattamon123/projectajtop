@@ -40,6 +40,20 @@ export const nwApi = {
     return res.json();
   },
 
+  // ── Security Alerts History ───────────────────────────────────────────────
+  async getAlerts({ page = 1, limit = 50, severity }) {
+    const q = new URLSearchParams();
+    q.set('page', page);
+    q.set('limit', limit);
+    if (severity) q.set('severity', severity);
+
+    const res = await fetch(`/api/alerts?${q.toString()}`, {
+      headers: { 'Authorization': `Bearer ${nwToken()}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch alerts');
+    return res.json();
+  },
+
   // ── Users Management (Admin) ──────────────────────────────────────────────
   async getUsers() {
     const res = await fetch('/api/users', {
